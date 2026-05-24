@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="{{ width }}" height="{{ height }}" viewBox="0 0 {{ width }} {{ height }}" fill="none" role="img" aria-label="{{ title }}">
+  <title>{{ title }}</title>
+  <style>
+    {{ css_vars|safe }}
+    .card {
+      fill: var(--card-bg);
+      stroke: var(--card-border);
+      stroke-width: 1;
+    }
+    .title {
+      fill: var(--accent);
+      font: 600 18px -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+    .subtitle {
+      fill: var(--text-secondary);
+      font: 400 12px -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+    .metric-value {
+      fill: var(--text-primary);
+      font: 700 22px -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+    .metric-label {
+      fill: var(--text-secondary);
+      font: 400 11px -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .heatmap-label {
+      fill: var(--text-muted);
+      font: 400 10px -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    }
+    .cell { rx: 2; ry: 2; opacity: 0; animation: cellIn 0.4s ease forwards; }
+    .metric { opacity: 0; animation: fadeUp 0.6s ease forwards; }
+    {% for i in range(metrics|length) %}
+    .metric-{{ i }} { animation-delay: {{ 0.1 + i * 0.08 }}s; }
+    {% endfor %}
+    @keyframes cellIn { to { opacity: 1; } }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .cell, .metric { opacity: 1; animation: none; }
+    }
+  </style>
+
+  <rect class="card" x="0.5" y="0.5" width="{{ width - 1 }}" height="{{ height - 1 }}" rx="10" ry="10"/>
+
+  <text class="title" x="22" y="34">{{ title }}</text>
+  <text class="subtitle" x="22" y="52">{{ subtitle }}</text>
+
+  {# Metrics row #}
+  {% set metric_y = 86 %}
+  {% if metrics %}
+  {% set metric_gap = (width - 44) / metrics|length %}
+  {% for m in metrics %}
+  <g class="metric metric-{{ loop.index0 }}" transform="translate({{ 22 + loop.index0 * metric_gap }}, {{ metric_y }})">
+    <text class="metric-value" x="0" y="0">{{ m.value }}</text>
+    <text class="metric-label" x="0" y="18">{{ m.label }}</text>
+  </g>
+  {% endfor %}
+  {% endif %}
+
+  {# Heatmap grid: 53 cols x 7 rows #}
+  {% set grid_x = 22 %}
+  {% set grid_y = 144 %}
+  {% set cell = 12 %}
+  {% set gap = 3 %}
+  {% for cell_data in heatmap_cells %}
+  <rect class="cell"
+        x="{{ grid_x + cell_data.col * (cell + gap) }}"
+        y="{{ grid_y + cell_data.row * (cell + gap) }}"
+        width="{{ cell }}"
+        height="{{ cell }}"
+        rx="2" ry="2"
+        fill="var(--heat-{{ cell_data.level }})"
+        style="animation-delay: {{ cell_data.delay }}s">
+    <title>{{ cell_data.tooltip }}</title>
+  </rect>
+  {% endfor %}
+
+  {# Legend at bottom-right #}
+  {% set legend_y = grid_y + 7 * (cell + gap) + 14 %}
+  {% set legend_x_end = width - 22 %}
+  <text class="heatmap-label" x="{{ legend_x_end - 90 }}" y="{{ legend_y }}" text-anchor="end">Less</text>
+  {% for level in range(5) %}
+  <rect class="cell" x="{{ legend_x_end - 80 + level * (cell + gap) }}" y="{{ legend_y - 9 }}" width="{{ cell }}" height="{{ cell }}" rx="2" ry="2" fill="var(--heat-{{ level }})" style="animation-delay: {{ 0.5 + level * 0.05 }}s"/>
+  {% endfor %}
+  <text class="heatmap-label" x="{{ legend_x_end - 80 + 5 * (cell + gap) + 6 }}" y="{{ legend_y }}">More</text>
+
+  <text class="heatmap-label" x="22" y="{{ legend_y }}">{{ year_label }}</text>
+</svg>

@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/activity", "destination": "/api/activity" },
+    { "source": "/stats", "destination": "/api/stats" },
+    { "source": "/languages", "destination": "/api/languages" }
+  ]
+}
