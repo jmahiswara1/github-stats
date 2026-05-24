@@ -263,8 +263,14 @@ def fetch(username: str) -> GitHubData:
         commits_acc: dict[str, LanguageStat] = {}
         repos: list[TopRepo] = []
 
+        # Only paginate the first 100 repos (sorted by stars desc). For accounts
+        # with hundreds of repos, walking everything blows past GitHub camo's
+        # ~5s fetch timeout. Top-100 covers all stargazed repos and the bulk of
+        # language distribution; the long tail is forks/experiments anyway.
+        MAX_REPOS = 100
+        repos_seen = 0
         cursor = None
-        while True:
+        while repos_seen < MAX_REPOS:
             page = _gql(client, _REPOS_QUERY, {"login": username, "cursor": cursor})
             repo_nodes = page["user"]["repositories"]
             for node in repo_nodes["nodes"]:
@@ -310,7 +316,11 @@ def fetch(username: str) -> GitHubData:
                     )
                     bucket.bytes += size
 
-            if not repo_nodes["pageInfo"]["hasNextPage"]:
+                repos_seen += 1
+                if repos_seen >= MAX_REPOS:
+                    break
+
+            if repos_seen >= MAX_REPOS or not repo_nodes["pageInfo"]["hasNextPage"]:
                 break
             cursor = repo_nodes["pageInfo"]["endCursor"]
 

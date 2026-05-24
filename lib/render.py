@@ -45,8 +45,9 @@ def render(template: str, **context) -> str:
 def cache_headers(max_age: int = 21600) -> dict[str, str]:
     """6h browser cache, 6h CDN cache, allow stale-while-revalidate for 1d.
 
-    GitHub's content-rendering proxy strips most headers, but Vercel CDN
-    honors s-maxage so origin hits stay low.
+    GitHub camo strips most headers but Vercel's CDN honors s-maxage so origin
+    hits stay rare. Once a deployment has warmed the cache, GitHub camo gets
+    sub-second responses regardless of how many repos the user has.
     """
     return {
         "Content-Type": "image/svg+xml; charset=utf-8",
@@ -55,6 +56,9 @@ def cache_headers(max_age: int = 21600) -> dict[str, str]:
             f"s-maxage={max_age}, "
             f"stale-while-revalidate={max_age * 4}"
         ),
+        # CDN-Cache-Control overrides Cache-Control on Vercel's edge.
+        # Setting to 7d so re-fetches hit Vercel cache, not GitHub API.
+        "CDN-Cache-Control": "public, max-age=604800",
     }
 
 
