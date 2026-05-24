@@ -65,11 +65,13 @@
 
   {% set legend_y = grid_y + 7 * (cell + gap) + 14 %}
   {% set legend_x_end = width - 22 %}
-  <text class="heatmap-label" x="{{ legend_x_end - 90 }}" y="{{ legend_y }}" text-anchor="end">Less</text>
+  {% set legend_cells_end = legend_x_end - 38 %}
+  {% set legend_cells_start = legend_cells_end - (5 * cell + 4 * gap) %}
+  <text class="heatmap-label" x="{{ legend_cells_start - 6 }}" y="{{ legend_y }}" text-anchor="end">Less</text>
   {% for level in range(5) %}
-  <rect x="{{ legend_x_end - 80 + level * (cell + gap) }}" y="{{ legend_y - 9 }}" width="{{ cell }}" height="{{ cell }}" rx="2" ry="2" fill="var(--heat-{{ level }})"/>
+  <rect x="{{ legend_cells_start + level * (cell + gap) }}" y="{{ legend_y - 9 }}" width="{{ cell }}" height="{{ cell }}" rx="2" ry="2" fill="var(--heat-{{ level }})"/>
   {% endfor %}
-  <text class="heatmap-label" x="{{ legend_x_end - 80 + 5 * (cell + gap) + 6 }}" y="{{ legend_y }}">More</text>
+  <text class="heatmap-label" x="{{ legend_x_end }}" y="{{ legend_y }}" text-anchor="end">More</text>
 
   <text class="heatmap-label" x="22" y="{{ legend_y }}">{{ year_label }}</text>
 </svg>

@@ -50,7 +50,7 @@ def stats(username: str | None = Query(default=None)):
             {"icon": ICONS["issue"], "label": "Issues closed", "value": f"{data.closed_issues}"},
             {"icon": ICONS["review"], "label": "Code reviews", "value": f"{data.reviews}"},
             {"icon": ICONS["people"], "label": "Followers", "value": f"{data.followers}"},
-            {"icon": ICONS["repo"], "label": "Public repositories", "value": f"{data.public_repos}"},
+            {"icon": ICONS["repo"], "label": "Repositories", "value": f"{data.public_repos}"},
         ]
 
         height = 70 + 28 * len(rows) + 18
@@ -181,7 +181,7 @@ def activity(username: str | None = Query(default=None)):
             title=f"{data.name}'s Activity",
             subtitle=f"@{data.login}  ·  {data.contributions_year:,} contributions in the last year",
             width=940,
-            height=260,
+            height=280,
             metrics=metrics,
             heatmap_cells=cells,
             year_label=str(datetime.now().year),
