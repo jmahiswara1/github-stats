@@ -145,7 +145,7 @@ _REPOS_QUERY = """
 query($login: String!, $cursor: String) {
   user(login: $login) {
     repositories(
-      first: 100,
+      first: 50,
       after: $cursor,
       ownerAffiliations: OWNER,
       isFork: false,
@@ -157,15 +157,8 @@ query($login: String!, $cursor: String) {
         stargazerCount
         forkCount
         primaryLanguage { name color }
-        languages(first: 20, orderBy: {field: SIZE, direction: DESC}) {
+        languages(first: 10, orderBy: {field: SIZE, direction: DESC}) {
           edges { size node { name color } }
-        }
-        defaultBranchRef {
-          target {
-            ... on Commit {
-              history(first: 0) { totalCount }
-            }
-          }
         }
       }
     }
@@ -174,13 +167,31 @@ query($login: String!, $cursor: String) {
 """
 
 
-def _gql(client: httpx.Client, query: str, variables: dict) -> dict:
-    resp = client.post(GRAPHQL_URL, json={"query": query, "variables": variables})
-    resp.raise_for_status()
-    payload = resp.json()
-    if "errors" in payload:
-        raise RuntimeError(f"GraphQL errors: {payload['errors']}")
-    return payload["data"]
+def _gql(client: httpx.Client, query: str, variables: dict, retries: int = 3) -> dict:
+    """POST GraphQL with retry on 502/503/504. GitHub is occasionally flaky."""
+    import time
+
+    last_error: Exception | None = None
+    for attempt in range(retries):
+        try:
+            resp = client.post(GRAPHQL_URL, json={"query": query, "variables": variables})
+            if resp.status_code in (502, 503, 504):
+                last_error = httpx.HTTPStatusError(
+                    f"transient {resp.status_code}", request=resp.request, response=resp
+                )
+                time.sleep(0.5 * (2**attempt))
+                continue
+            resp.raise_for_status()
+            payload = resp.json()
+            if "errors" in payload:
+                raise RuntimeError(f"GraphQL errors: {payload['errors']}")
+            return payload["data"]
+        except httpx.HTTPStatusError as e:
+            last_error = e
+            if e.response.status_code not in (502, 503, 504):
+                raise
+            time.sleep(0.5 * (2**attempt))
+    raise last_error or RuntimeError("GraphQL request failed after retries")
 
 
 def _streaks(daily_counts: list[tuple[str, int]]) -> tuple[int, int]:
@@ -271,16 +282,14 @@ def fetch(username: str) -> GitHubData:
                     )
                 )
 
-                branch = node.get("defaultBranchRef") or {}
-                target = (branch.get("target") or {}) if branch else {}
-                history = (target.get("history") or {}) if target else {}
-                repo_commits = history.get("totalCount", 0) or 0
-
                 edges = node["languages"]["edges"]
-                total_size = sum(e["size"] for e in edges) or 1
 
                 primary_name = primary.get("name")
-                if primary_name and repo_commits:
+                if primary_name:
+                    # Proxy for "commits" metric: count repos using this language
+                    # as primary. GitHub doesn't expose per-language commit count
+                    # cheaply — exact totalCount triggers expensive history walks
+                    # and frequent 502s. Repo count is a stable, cheap proxy.
                     bucket = commits_acc.setdefault(
                         primary_name,
                         LanguageStat(
@@ -288,7 +297,7 @@ def fetch(username: str) -> GitHubData:
                             color=primary.get("color") or "",
                         ),
                     )
-                    bucket.commits += repo_commits
+                    bucket.commits += 1
 
                 for edge in edges:
                     lang = edge["node"]
