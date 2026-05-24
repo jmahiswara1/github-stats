@@ -62,7 +62,7 @@ def css_vars() -> str:
             f"--bg:{theme.bg};"
             f"--card-bg:{theme.card_bg};"
             f"--card-border:{theme.card_border};"
-            f"--text:{theme.text_primary};"
+            f"--text-primary:{theme.text_primary};"
             f"--text-secondary:{theme.text_secondary};"
             f"--text-muted:{theme.text_muted};"
             f"--accent:{theme.accent};"
