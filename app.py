@@ -72,35 +72,46 @@ def stats(username: str | None = Query(default=None)):
 @app.get("/api/languages")
 def languages(
     username: str | None = Query(default=None),
-    metric: str = Query(default="size"),
+    metric: str | None = Query(default=None),
 ):
     try:
         login = env_username(username)
-        metric_norm = metric.lower() if metric.lower() in ("size", "commits") else "size"
+        m = (metric or "").lower()
+        if m == "size":
+            m = "filesize"
+        if m not in ("commits", "filesize"):
+            m = "both"
 
         data = fetch(login)
-        source = (
-            data.languages_by_size if metric_norm == "size" else data.languages_by_commits
-        )
-        ranked = language_percentages(source, metric=metric_norm, limit=10)
 
-        items = [
-            {
-                "name": stat.name,
-                "color": stat.color or DARK.fallback_lang,
-                "pct": pct,
-            }
-            for stat, pct in ranked
-        ]
+        def _items(source, key):
+            ranked = language_percentages(source, metric=key, limit=8)
+            return [
+                {
+                    "name": stat.name,
+                    "color": stat.color or DARK.fallback_lang,
+                    "pct": pct,
+                }
+                for stat, pct in ranked
+            ]
 
-        metric_label = "File Size" if metric_norm == "size" else "Commits"
+        sections: list[dict] = []
+        if m in ("both", "filesize"):
+            sections.append(
+                {"label": "By File Size", "langs": _items(data.languages_by_size, "size")}
+            )
+        if m in ("both", "commits"):
+            sections.append(
+                {"label": "By Commits", "langs": _items(data.languages_by_commits, "commits")}
+            )
+
+        height = 300 if len(sections) == 1 else 56 + len(sections) * 156 + 16
 
         svg = render(
             "languages.svg.j2",
             width=460,
-            height=300,
-            items=items,
-            metric_label=metric_label,
+            height=height,
+            sections=sections,
         )
         return Response(content=svg, headers=cache_headers())
     except Exception:  # noqa: BLE001

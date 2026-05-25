@@ -29,19 +29,28 @@
   <rect class="card" x="0.5" y="0.5" width="{{ width - 1 }}" height="{{ height - 1 }}" rx="10" ry="10"/>
 
   <text class="title" x="22" y="34">Languages Used</text>
-  <text class="subtitle" x="{{ width - 22 }}" y="34" text-anchor="end">By {{ metric_label }}</text>
 
   {% set bar_x = 22 %}
-  {% set bar_y = 56 %}
   {% set bar_w = width - 44 %}
   {% set bar_h = 10 %}
-  <clipPath id="bar-clip">
+  {% set col_w = (width - 44) / 2 %}
+  {% set row_h = 22 %}
+  {% set section_h = 156 %}
+
+  {% for section in sections %}
+  {% set section_y = 56 + loop.index0 * section_h %}
+  {% set bar_y = section_y + 16 %}
+  {% set legend_y = section_y + 52 %}
+
+  <text class="subtitle" x="{{ bar_x }}" y="{{ section_y }}">{{ section.label }}</text>
+
+  <clipPath id="bar-clip-{{ loop.index0 }}">
     <rect x="{{ bar_x }}" y="{{ bar_y }}" width="{{ bar_w }}" height="{{ bar_h }}" rx="5" ry="5"/>
   </clipPath>
   <rect class="bar-track" x="{{ bar_x }}" y="{{ bar_y }}" width="{{ bar_w }}" height="{{ bar_h }}" rx="5" ry="5"/>
-  <g clip-path="url(#bar-clip)">
+  <g clip-path="url(#bar-clip-{{ loop.index0 }})">
     {% set ns = namespace(offset=0) %}
-    {% for item in items %}
+    {% for item in section.langs %}
     <rect
           x="{{ bar_x + ns.offset }}"
           y="{{ bar_y }}"
@@ -52,10 +61,7 @@
     {% endfor %}
   </g>
 
-  {% set col_w = (width - 44) / 2 %}
-  {% set legend_y = 92 %}
-  {% set row_h = 22 %}
-  {% for item in items %}
+  {% for item in section.langs %}
     {% set col = loop.index0 % 2 %}
     {% set row = loop.index0 // 2 %}
     <g transform="translate({{ 22 + col * col_w }}, {{ legend_y + row * row_h }})">
@@ -63,5 +69,6 @@
       <text class="lang-name" x="18" y="0" dominant-baseline="middle">{{ item.name }}</text>
       <text class="lang-pct" x="{{ col_w - 14 }}" y="0" text-anchor="end" dominant-baseline="middle">{{ item.pct|percent }}</text>
     </g>
+  {% endfor %}
   {% endfor %}
 </svg>
