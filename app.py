@@ -53,12 +53,11 @@ def stats(username: str | None = Query(default=None)):
             {"icon": ICONS["repo"], "label": "Repositories", "value": f"{data.public_repos}"},
         ]
 
-        height = 70 + 28 * len(rows) + 18
         svg = render(
             "stats.svg.j2",
             title=f"{data.name}'s Statistics",
             width=460,
-            height=height,
+            height=300,
             rows=rows,
         )
         return Response(content=svg, headers=cache_headers())
@@ -95,13 +94,11 @@ def languages(
         ]
 
         metric_label = "File Size" if metric_norm == "size" else "Commits"
-        rows = (len(items) + 1) // 2
-        height = 92 + rows * 22 + 16
 
         svg = render(
             "languages.svg.j2",
             width=460,
-            height=height,
+            height=300,
             items=items,
             metric_label=metric_label,
         )
